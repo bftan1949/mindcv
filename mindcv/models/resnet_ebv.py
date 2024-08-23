@@ -9,9 +9,9 @@ import mindspore.common.initializer as init
 from mindspore import Tensor, nn
 
 from .helpers import build_model_with_cfg
+from .layers import EBV
 from .layers.pooling import GlobalAvgPooling
 from .registry import register_model
-from .layers import EBV
 
 __all__ = [
     "ResNetEBV",
@@ -417,15 +417,3 @@ def resnext152_64x4d_ebv(pretrained: bool = False, num_classes: int = 1000, in_c
     model_args = dict(block=Bottleneck, layers=[3, 8, 36, 3], groups=64, base_width=4, num_classes=num_classes,
                       in_channels=in_channels, **kwargs)
     return _create_resnet_ebv(pretrained, **dict(default_cfg=default_cfg, **model_args))
-
-
-if __name__ == '__main__':
-    import numpy as np
-    import mindspore
-    from mindspore import Tensor
-
-    model = resnet50_ebv()
-    print(model)
-    dummy_input = Tensor(np.random.rand(8, 3, 224, 224), dtype=mindspore.float32)
-    y = model(dummy_input)
-    print(y.shape)

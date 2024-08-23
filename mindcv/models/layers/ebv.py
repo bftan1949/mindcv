@@ -4,9 +4,9 @@ Papers:
 Equiangular Basis Vectors (https://arxiv.org/pdf/2303.11637)
 """
 
-from mindspore import Tensor, nn, ops
 import mindspore as ms
 import mindspore.numpy as msnp
+from mindspore import Tensor, nn, ops
 
 
 class EBV(nn.Cell):
@@ -47,12 +47,13 @@ class EBV(nn.Cell):
         self.tau = tau
         self.l2norm = ops.L2Normalize()
         self.ebv = self._generate_ebv()
+        self.ebv.requires_grad = False
 
     def _generate_ebv(self):
         basis_vec = ms.Parameter(
             ops.L2Normalize(1)(
                 ops.standard_normal((self.num_cls, self.dim))
-            ), name='basis_vec')
+            ), name='basis_vec', requires_grad=True)
         optim = nn.SGD([basis_vec], learning_rate=self.lr)
         matmul = ops.MatMul(transpose_b=True)
 
@@ -69,7 +70,7 @@ class EBV(nn.Cell):
             for i in range((self.num_cls - 1) // self.slice_size + 1):
                 start = self.slice_size * i
                 end = min(self.slice_size * (i + 1), self.num_cls)
-                e = ops.one_hot(msnp.arange(start, end), self.num_cls)
+                e = ops.one_hot(msnp.arange(start, end), self.num_cls, Tensor(1.0, ms.float32), Tensor(0.0, ms.float32))
                 (loss, m), grads_partial = grad_fn(basis_vec[start:end], basis_vec, e, self.thre)
                 mx = max(mx, m.max().asnumpy().tolist())
                 grads = grads + grads_partial[0]
@@ -82,10 +83,6 @@ class EBV(nn.Cell):
 
     def construct(self, x: Tensor) -> Tensor:
         x = self.l2norm(x)
-        logits = x @ self.ebv.t() / self.tau
+        logits = ops.matmul(x, self.ebv.T / self.tau)
 
         return logits
-
-if __name__ == '__main__':
-    ebv = EBV()
-    print(ebv)
